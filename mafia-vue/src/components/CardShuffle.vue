@@ -122,14 +122,18 @@
         <header class="panel-header">
             <h2 class="panel-title">Your seat</h2>
         </header>
-        <div v-if="iPlayer.order === 'Guest'" class="reveal-text">
-            Joined as <strong>{{ iPlayer.name }}</strong> &middot; <span class="role-pill role-guest">Guest</span>
-        </div>
-        <div v-else-if="iPlayer.order === 'Host'" class="reveal-host">
-            <div class="reveal-text">
-                Joined as <strong>{{ iPlayer.name }}</strong> &middot; <span class="role-pill role-host">Host</span>
-                &middot; Game <strong>#{{ game }}</strong>
+        <div class="seat-summary">
+            <span class="seat-badge" :class="seatBadgeClass">{{ seatBadgeLabel }}</span>
+            <div class="seat-meta">
+                <div>Joined as <strong>{{ iPlayer.name }}</strong></div>
+                <div v-if="iPlayer.order === 'Guest'" class="seat-meta-sub">You are a guest in this room.</div>
+                <div v-else-if="iPlayer.order === 'Host'" class="seat-meta-sub">You are the room host &middot; Game <strong>#{{ game }}</strong></div>
+                <div v-else-if="iPlayer.card" class="seat-meta-sub">Game <strong>#{{ iPlayer.game }}</strong></div>
+                <div v-else class="seat-meta-sub">Waiting for the game master to deal cards.</div>
             </div>
+        </div>
+
+        <div v-if="iPlayer.order === 'Host'" class="host-detail">
             <ol v-if="hostGameArr.length" class="host-game-list">
                 <li v-for="p in hostGameArr" :key="p.order">
                     <span class="host-order">{{ p.order }}</span>
@@ -137,13 +141,7 @@
                 </li>
             </ol>
         </div>
-        <div v-else class="reveal-player">
-            <div class="reveal-text">
-                Joined as <strong>{{ iPlayer.name }}</strong>
-                <template v-if="iPlayer.card">
-                    &middot; Game <strong>#{{ iPlayer.game }}</strong>
-                </template>
-            </div>
+        <div v-else-if="iPlayer.order !== 'Guest'" class="reveal-player">
             <div v-if="iPlayer.card && game === iPlayer.game" class="card-reveal">
                 <img class="card-image" :src="cardImage" :title="iPlayer.card" :alt="'Your card: ' + iPlayer.card" />
                 <span class="card-name">{{ iPlayer.card }}</span>
@@ -382,7 +380,12 @@ export default {
             }, 1000)
         },
         updatePlayerOrder (order, player) {
-            this.$socket.emit('updateorder', { room: this.room, player, order })
+            // <select> hands back its value as a string; the server's player
+            // lookups compare with === so numeric seats need to round-trip as
+            // numbers, otherwise reassigning to a numbered seat silently
+            // creates duplicates.
+            const coerced = order === 'Host' || order === 'Guest' ? order : Number(order)
+            this.$socket.emit('updateorder', { room: this.room, player, order: coerced })
         }
     },
     created () {
@@ -400,6 +403,17 @@ export default {
     computed: {
         hasPlayer () {
             return !!(this.iPlayer && Object.keys(this.iPlayer).length)
+        },
+        seatBadgeLabel () {
+            const order = this.iPlayer?.order
+            if (order === 'Host' || order === 'Guest') return order
+            return order ?? '\u2014'
+        },
+        seatBadgeClass () {
+            const order = this.iPlayer?.order
+            if (order === 'Host') return 'seat-badge-host'
+            if (order === 'Guest') return 'seat-badge-guest'
+            return 'seat-badge-numbered'
         },
         cardImage () {
             let cardImage = ''
@@ -782,21 +796,44 @@ export default {
     margin-top: 0.25rem;
 }
 
-.reveal-text {
+.seat-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.seat-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    height: 3rem;
+    padding: 0 0.85rem;
+    border-radius: var(--radius);
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: var(--brand-primary);
+    color: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.seat-badge-host { background: #1f6e4a; }
+.seat-badge-guest { background: var(--text-muted); font-size: 1rem; }
+
+.seat-meta {
     color: var(--text);
     font-size: 1rem;
+    line-height: 1.4;
 }
 
-.role-pill {
-    display: inline-block;
-    padding: 0.1rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 600;
+.seat-meta-sub {
+    color: var(--text-muted);
+    font-size: 0.92rem;
 }
 
-.role-host { background: #e8f4ee; color: #1f6e4a; }
-.role-guest { background: var(--surface-muted); color: var(--text-muted); }
+.host-detail {
+    margin-top: 0.85rem;
+}
 
 .card-reveal {
     margin-top: 0.85rem;
