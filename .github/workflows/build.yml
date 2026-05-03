@@ -73,3 +73,64 @@ jobs:
           path: mafia-helm
           create_component: 'true'
           limit_to_branches: main
+  submit-mafia-test-harness:
+    permissions:
+      contents: read
+      id-token: write
+    name: Submit mafia-test-harness Metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup ReARM CLI
+        uses: relizaio/rearm-actions/setup-cli@6604005540f3e25c6ad612f208f9b16d5bce707c
+
+      - name: Initialize ReARM Release
+        id: init
+        uses: relizaio/rearm-actions/initialize@6604005540f3e25c6ad612f208f9b16d5bce707c
+        with:
+          rearm_api_key: ${{ secrets.REARM_API_KEY }}
+          rearm_api_id: ${{ secrets.REARM_API_ID }}
+          rearm_api_url: https://dev.rearmhq.com
+          repo_path: test-harness
+          create_component: 'true'
+
+      - name: Generate npm SBOM
+        if: steps.init.outputs.do_build == 'true'
+        working-directory: test-harness
+        run: |
+          npm install --global @cyclonedx/cyclonedx-npm@4.2.1 --ignore-scripts
+          npm ci --ignore-scripts
+          cyclonedx-npm --flatten-components > fs.cdx.bom.json
+          du -h fs.cdx.bom.json
+
+      - name: Submit release metadata to ReARM
+        if: steps.init.outputs.do_build == 'true'
+        working-directory: test-harness
+        env:
+          REARM_API_ID: ${{ secrets.REARM_API_ID }}
+          REARM_API_KEY: ${{ secrets.REARM_API_KEY }}
+        run: |
+          set -e
+          rearm_branch_name="${{ github.head_ref || github.ref_name }}"
+          scearts='[{"bomFormat":"CYCLONEDX","type":"BOM","filePath":"./fs.cdx.bom.json"}]'
+          rearm addrelease \
+            --apikeyid "$REARM_API_ID" \
+            --apikey "$REARM_API_KEY" \
+            -u https://dev.rearmhq.com \
+            -b "$rearm_branch_name" \
+            -v "${{ steps.init.outputs.full_version }}" \
+            --lifecycle ASSEMBLED \
+            --vcstype git \
+            --vcsuri "${{ github.server_url }}/${{ github.repository }}" \
+            --repo-path test-harness \
+            --commit "${{ steps.init.outputs.sce_commit }}" \
+            --commitmessage "${{ steps.init.outputs.sce_commit_message }}" \
+            --date "${{ steps.init.outputs.sce_commit_date }}" \
+            --commits "${{ steps.init.outputs.commit_list }}" \
+            --datestart "${{ steps.init.outputs.build_start }}" \
+            --dateend "$(date -Iseconds)" \
+            --scearts "$scearts"
