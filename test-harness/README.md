@@ -1,6 +1,9 @@
 # test-harness
 
-Headless smoke test for the Mafia Card Shuffle UI. Validates that:
+Headless smoke test for the Mafia Card Shuffle UI. CI registers releases of
+this directory as a separate ReARM component (`mafia-test-harness`).
+
+Validates that:
 
 - Home / Rules / Clubs routes render
 - Generate-room redirects to a `/cards/<room>` URL
