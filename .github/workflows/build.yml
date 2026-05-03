@@ -86,11 +86,11 @@ jobs:
           fetch-depth: 0
 
       - name: Setup ReARM CLI
-        uses: relizaio/rearm-actions/setup-cli@6604005540f3e25c6ad612f208f9b16d5bce707c
+        uses: relizaio/rearm-actions/setup-cli@2ac9dce873f424e5ecd7d8fe73b331139a38bc8c
 
       - name: Initialize ReARM Release
         id: init
-        uses: relizaio/rearm-actions/initialize@6604005540f3e25c6ad612f208f9b16d5bce707c
+        uses: relizaio/rearm-actions/initialize@2ac9dce873f424e5ecd7d8fe73b331139a38bc8c
         with:
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
           rearm_api_id: ${{ secrets.REARM_API_ID }}
