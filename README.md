@@ -26,3 +26,7 @@ pinned to `@main` for the duration of this demo.
 
 - `DOCKER_LOGIN`, `DOCKER_TOKEN` — registry auth (provisioned on the repo)
 - `REARM_API_ID`, `REARM_API_KEY` — FREEFORM key for the ReARM org
+# PR Comment demo
+
+Trigger a fresh build to verify the new PR_COMMENT output trigger.
+
