@@ -27,3 +27,5 @@ sudo apt-get install -y libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2 \
 ```
 
 Updated for PR_COMMENT trigger fire.
+
+Re-trigger PR_COMMENT after wiring outputs.
