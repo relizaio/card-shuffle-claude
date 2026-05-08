@@ -30,3 +30,4 @@ pinned to `@main` for the duration of this demo.
 
 Trigger a fresh build to verify the new PR_COMMENT output trigger.
 
+## syncbranches close-stale-prs verification 2026-05-08T20:07:45+0000
