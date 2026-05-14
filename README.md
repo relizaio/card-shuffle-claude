@@ -51,3 +51,5 @@ The `mafia-helm/` chart works against a local kind / k3d / minikube
 cluster too — see the chart's `values.yaml` for the env vars (registry
 image tags, redis host) that you'll typically want to override for a
 loopback deploy.
+
+<!-- negative flow test: session 28b3aad5 -->
