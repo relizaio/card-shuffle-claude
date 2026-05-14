@@ -40,3 +40,7 @@ npm run dev
 The dev server listens on the port printed by Vite (typically 5173) and
 hot-reloads on save. The component tree mirrors the deployed Nginx
 build — see `mafia-vue/src/components/`.
+
+For the Express backend, see `mafia-express/` — `node app.js` after
+`npm install` and a local redis (port 6379) is enough; the helm chart
+sets `REDIS_HOST` so the two halves can find each other in-cluster.
