@@ -44,3 +44,10 @@ build — see `mafia-vue/src/components/`.
 For the Express backend, see `mafia-express/` — `node app.js` after
 `npm install` and a local redis (port 6379) is enough; the helm chart
 sets `REDIS_HOST` so the two halves can find each other in-cluster.
+
+### Bringing the whole stack up locally
+
+The `mafia-helm/` chart works against a local kind / k3d / minikube
+cluster too — see the chart's `values.yaml` for the env vars (registry
+image tags, redis host) that you'll typically want to override for a
+loopback deploy.
