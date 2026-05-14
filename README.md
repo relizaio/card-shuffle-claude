@@ -26,3 +26,17 @@ pinned to `@main` for the duration of this demo.
 
 - `DOCKER_LOGIN`, `DOCKER_TOKEN` — registry auth (provisioned on the repo)
 - `REARM_API_ID`, `REARM_API_KEY` — FREEFORM key for the ReARM org
+
+## Local development
+
+Run the Vue frontend on its own (mock backend, no redis required):
+
+```
+cd mafia-vue
+npm install
+npm run dev
+```
+
+The dev server listens on the port printed by Vite (typically 5173) and
+hot-reloads on save. The component tree mirrors the deployed Nginx
+build — see `mafia-vue/src/components/`.
