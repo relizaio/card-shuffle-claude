@@ -21,7 +21,7 @@ jobs:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
           registry_host: registry.test.relizahub.com
-          image_namespace: registry.test.relizahub.com/a98e122c-3265-43da-b73d-ce21f49c397a-public
+          image_namespace: registry.test.relizahub.com/fd4383f4-bdef-488e-9578-cd2e4a6b48bc-public
           image_name: mafia-vue
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
@@ -43,7 +43,7 @@ jobs:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
           registry_host: registry.test.relizahub.com
-          image_namespace: registry.test.relizahub.com/a98e122c-3265-43da-b73d-ce21f49c397a-public
+          image_namespace: registry.test.relizahub.com/fd4383f4-bdef-488e-9578-cd2e4a6b48bc-public
           image_name: mafia-express
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
@@ -64,7 +64,7 @@ jobs:
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
-          registry_host: registry.test.relizahub.com/a98e122c-3265-43da-b73d-ce21f49c397a-public
+          registry_host: registry.test.relizahub.com/fd4383f4-bdef-488e-9578-cd2e4a6b48bc-public
           helm_chart_name: mafia
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
