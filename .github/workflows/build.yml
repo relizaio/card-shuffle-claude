@@ -5,7 +5,7 @@ on: [push, pull_request]
 #    branches: [main]    # post-merge commits to main only
 #  pull_request:         # everything in feature branches goes through PR event
 
-name: Build Mafia Components And Submit Metadata To Reliza ReARM Dev
+name: Build Mafia Components And Submit Metadata To Reliza ReARM (psclaude)
 
 jobs:
   build-mafia-vue:
@@ -15,7 +15,7 @@ jobs:
     name: Build And Push mafia-vue
     runs-on: ubuntu-latest
     steps:
-      - name: Build And Push mafia-vue to ReARM Dev
+      - name: Build And Push mafia-vue to ReARM (psclaude)
         uses: relizaio/rearm-docker-action@main
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
@@ -25,7 +25,7 @@ jobs:
           image_name: mafia-vue
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
-          rearm_api_url: https://dev.rearmhq.com
+          rearm_api_url: https://psclaude.rearmhq.com
           path: mafia-vue
           enable_sbom: true
           source_code_sbom_type: npm
@@ -37,7 +37,7 @@ jobs:
     name: Build And Push mafia-express
     runs-on: ubuntu-latest
     steps:
-      - name: Build And Push mafia-express to ReARM Dev
+      - name: Build And Push mafia-express to ReARM (psclaude)
         uses: relizaio/rearm-docker-action@main
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
@@ -47,7 +47,7 @@ jobs:
           image_name: mafia-express
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
-          rearm_api_url: https://dev.rearmhq.com
+          rearm_api_url: https://psclaude.rearmhq.com
           path: mafia-express
           enable_sbom: true
           source_code_sbom_type: npm
@@ -59,7 +59,7 @@ jobs:
     name: Build And Push mafia Helm Chart
     runs-on: ubuntu-latest
     steps:
-      - name: Build mafia Helm Chart and push to ReARM Dev
+      - name: Build mafia Helm Chart and push to ReARM (psclaude)
         uses: relizaio/rearm-helm-action@main
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
@@ -68,7 +68,7 @@ jobs:
           helm_chart_name: mafia
           rearm_api_id: ${{ secrets.REARM_API_ID }}
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
-          rearm_api_url: https://dev.rearmhq.com
+          rearm_api_url: https://psclaude.rearmhq.com
           enable_sbom: true
           path: mafia-helm
           create_component: 'true'
@@ -98,12 +98,9 @@ jobs:
         with:
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
           rearm_api_id: ${{ secrets.REARM_API_ID }}
-          rearm_api_url: https://dev.rearmhq.com
+          rearm_api_url: https://psclaude.rearmhq.com
           repo_path: test-harness
           create_component: 'true'
-          # Pin to one of the two duplicates created during initial setup races
-          # so syncbranches/getversion don't error out on the ambiguity.
-          component: 4f7f632e-ff27-4f49-a8f0-b906359619a5
 
       - name: Generate npm SBOM
         if: steps.init.outputs.do_build == 'true'
@@ -127,11 +124,10 @@ jobs:
           rearm addrelease \
             --apikeyid "$REARM_API_ID" \
             --apikey "$REARM_API_KEY" \
-            -u https://dev.rearmhq.com \
+            -u https://psclaude.rearmhq.com \
             -b "$rearm_branch_name" \
             -v "${{ steps.init.outputs.full_version }}" \
             --lifecycle ASSEMBLED \
-            --component 4f7f632e-ff27-4f49-a8f0-b906359619a5 \
             --vcstype git \
             --vcsuri "${{ github.server_url }}/${{ github.repository }}" \
             --repo-path test-harness \
