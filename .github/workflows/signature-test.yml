@@ -127,8 +127,7 @@ jobs:
             | tee /tmp/release.json
           echo
           echo "===== Release submitted ====="
-          # Pull the SCE uuid from the response so the next step can
-          # report the verdict ReARM auto-fired.
-          SCE_UUID=$(python3 -c "import json; print(json.load(open('/tmp/release.json'))['sourceCodeEntry'])")
+          # Pull the SCE uuid out of the GraphQL envelope (data.addReleaseProgrammatic).
+          SCE_UUID=$(python3 -c "import json; d=json.load(open('/tmp/release.json')); print((d.get('data',{}).get('addReleaseProgrammatic') or d).get('sourceCodeEntry'))")
           echo "sce_uuid=$SCE_UUID"
           echo "Auto-verify verdict will appear at SourceCodeEntry.signature for SCE $SCE_UUID"
