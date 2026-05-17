@@ -1,0 +1,134 @@
+name: Signature verification E2E test
+
+# Triggers only on the dedicated test branch so the existing mafia
+# build pipeline isn't perturbed. The job extracts the HEAD commit's
+# git-level signature (SSH/GPG) into SIGNATURE + SIGNED_PAYLOAD
+# artifacts and submits them via `rearm addrelease --scearts` against
+# the agentic test org on psclaude. The backend's
+# auto-verify-on-SCE-artifact-ingest path then writes the verdict to
+# signature_verifications — no second mutation call needed.
+
+on:
+  push:
+    branches: ['2026-05-sig-e2e']
+
+jobs:
+  signature-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install rearm CLI
+        run: |
+          set -eu
+          wget -q https://d7ge14utcyki8.cloudfront.net/rearm-download/26.04.4/rearm-26.04.4-linux-amd64.zip
+          unzip -q rearm-26.04.4-linux-amd64.zip
+          sudo mv rearm /usr/local/bin/rearm
+          rearm version | head -1
+
+      - name: Extract HEAD commit signature
+        id: extract
+        run: |
+          set -euo pipefail
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "commit=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          git cat-file commit "$COMMIT_SHA" > commit-raw.bin
+          # Peel gpgsig header + continuation lines into signature.bin;
+          # the rest is the signed payload (the byte sequence
+          # git/ssh-keygen hashes & verifies).
+          awk '
+              BEGIN { in_sig = 0; in_hdr = 1 }
+              {
+                  if (in_hdr && $0 == "") {
+                      in_hdr = 0; in_sig = 0; print; next
+                  }
+                  if (in_hdr) {
+                      if ($0 ~ /^gpgsig /) {
+                          in_sig = 1; sub(/^gpgsig /, "", $0)
+                          print $0 > "./commit-signature.bin"; next
+                      }
+                      if (in_sig && substr($0, 1, 1) == " ") {
+                          sub(/^ /, "", $0)
+                          print $0 > "./commit-signature.bin"; next
+                      }
+                      in_sig = 0; print; next
+                  }
+                  print
+              }
+          ' commit-raw.bin > commit-signed-payload.bin
+          rm commit-raw.bin
+          if [[ ! -s ./commit-signature.bin ]]; then
+              echo "Commit ${COMMIT_SHA} is unsigned — failing the test (this workflow expects signed commits)" >&2
+              exit 1
+          fi
+          if head -1 ./commit-signature.bin | grep -q "BEGIN SSH SIGNATURE"; then
+              SIG_FORMAT="SSH"
+          elif head -1 ./commit-signature.bin | grep -q "BEGIN PGP SIGNATURE"; then
+              SIG_FORMAT="GPG"
+          else
+              echo "Signature is neither SSH nor PGP" >&2
+              exit 1
+          fi
+          echo "format=${SIG_FORMAT}" >> $GITHUB_OUTPUT
+          echo "Extracted ${SIG_FORMAT} signature for ${COMMIT_SHA}"
+
+      - name: Submit release with signature artifacts (auto-verify path)
+        env:
+          REARM_API_ID: ${{ secrets.REARM_API_ID }}
+          REARM_API_KEY: ${{ secrets.REARM_API_KEY }}
+          COMMIT_SHA: ${{ steps.extract.outputs.commit }}
+          SIG_FORMAT: ${{ steps.extract.outputs.format }}
+        run: |
+          set -euo pipefail
+          SCEARTS=$(cat <<JSON
+          [
+            {
+              "type": "SIGNATURE",
+              "filePath": "./commit-signature.bin",
+              "storedIn": "REARM",
+              "displayIdentifier": "${COMMIT_SHA}.sig",
+              "tags": [
+                {"key": "signatureSubject", "value": "COMMIT"},
+                {"key": "signatureFormat", "value": "${SIG_FORMAT}"},
+                {"key": "signedCommitSha", "value": "${COMMIT_SHA}"}
+              ]
+            },
+            {
+              "type": "SIGNED_PAYLOAD",
+              "filePath": "./commit-signed-payload.bin",
+              "storedIn": "REARM",
+              "displayIdentifier": "${COMMIT_SHA}.payload",
+              "tags": [
+                {"key": "signedCommitSha", "value": "${COMMIT_SHA}"}
+              ]
+            }
+          ]
+          JSON
+          )
+          rearm addrelease \
+            --apikeyid "$REARM_API_ID" --apikey "$REARM_API_KEY" \
+            -u https://psclaude.rearmhq.com \
+            --version "0.0.0-${COMMIT_SHA:0:8}" \
+            --branch "2026-05-sig-e2e" \
+            --createcomponent \
+            --createcomponent-name "sig-e2e-card-shuffle-claude" \
+            --createcomponent-version-schema semver \
+            --createcomponent-branch-version-schema Branch.Micro \
+            --vcstype git \
+            --vcsuri "${{ github.server_url }}/${{ github.repository }}" \
+            --commit "$COMMIT_SHA" \
+            --lifecycle ASSEMBLED \
+            --scearts "$SCEARTS" \
+            | tee /tmp/release.json
+          echo
+          echo "===== Release submitted ====="
+          # Pull the SCE uuid from the response so the next step can
+          # report the verdict ReARM auto-fired.
+          SCE_UUID=$(python3 -c "import json; print(json.load(open('/tmp/release.json'))['sourceCodeEntry'])")
+          echo "sce_uuid=$SCE_UUID"
+          echo "Auto-verify verdict will appear at SourceCodeEntry.signature for SCE $SCE_UUID"
