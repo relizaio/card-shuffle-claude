@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build And Push mafia-vue to ReARM (psclaude)
-        uses: relizaio/rearm-docker-action@main
+        uses: relizaio/rearm-docker-action@2026-05-agentic
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build And Push mafia-express to ReARM (psclaude)
-        uses: relizaio/rearm-docker-action@main
+        uses: relizaio/rearm-docker-action@2026-05-agentic
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
