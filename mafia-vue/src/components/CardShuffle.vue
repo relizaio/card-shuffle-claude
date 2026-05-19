@@ -84,7 +84,10 @@
                     <span>Add role</span>
                 </button>
             </div>
-            <button class="btn btn-primary" type="button" @click="shuffleCards">Shuffle cards</button>
+            <div class="admin-distribution-actions">
+                <button class="btn btn-ghost" type="button" @click="resetCardsToPlayers">Reset cards to player count</button>
+                <button class="btn btn-primary" type="button" @click="shuffleCards">Shuffle cards</button>
+            </div>
         </div>
 
         <b-modal
@@ -345,6 +348,44 @@ export default {
                 room: this.room,
                 uuid: window.localStorage.getItem('mafiaUuid')
             })
+        },
+        resetCardsToPlayers () {
+            const target = this.playersInGame.length
+            const keys = Object.keys(this.cards)
+            if (!keys.length) {
+                this.flashAlert('No card roles defined.')
+                return
+            }
+            if (target === 0) {
+                keys.forEach(k => { this.cards[k].num = 0 })
+                this.flashAlert('No players in game — all card counts cleared.')
+                return
+            }
+            const total = this.distributedCards
+            if (total === 0) {
+                // No proportions to preserve; pick a random role to carry the full count.
+                const pick = keys[Math.floor(Math.random() * keys.length)]
+                keys.forEach(k => { this.cards[k].num = k === pick ? target : 0 })
+                return
+            }
+            // Largest Remainder Method, with a random shuffle on the residual queue
+            // so ties (and the 1-player case) resolve to a random role rather than
+            // a deterministic alphabetical winner.
+            const raw = keys.map(k => ({ key: k, exact: this.cards[k].num * target / total }))
+            const floors = raw.map(r => ({ key: r.key, base: Math.floor(r.exact), frac: r.exact - Math.floor(r.exact) }))
+            let assigned = floors.reduce((s, r) => s + r.base, 0)
+            let remaining = target - assigned
+            const queue = floors.slice().sort((a, b) => {
+                if (b.frac !== a.frac) return b.frac - a.frac
+                return Math.random() - 0.5
+            })
+            const counts = {}
+            floors.forEach(r => { counts[r.key] = r.base })
+            for (let i = 0; i < queue.length && remaining > 0; i++) {
+                counts[queue[i].key] += 1
+                remaining -= 1
+            }
+            keys.forEach(k => { this.cards[k].num = counts[k] })
         },
         shuffleCards () {
             if (this.distributedCards !== this.playersInGame.length) {
@@ -674,6 +715,12 @@ export default {
     color: var(--text-muted);
     margin: 0 0 0.85rem;
     font-size: 0.9rem;
+}
+
+.admin-distribution-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .cards-grid {
