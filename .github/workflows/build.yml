@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build And Push mafia-vue to ReARM (psclaude)
-        uses: relizaio/rearm-docker-action@main
+        uses: relizaio/rearm-docker-action@ca8c919da76a05706c552866e09c7d2f6e342402
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build And Push mafia-express to ReARM (psclaude)
-        uses: relizaio/rearm-docker-action@main
+        uses: relizaio/rearm-docker-action@ca8c919da76a05706c552866e09c7d2f6e342402
         with:
           registry_username: ${{ secrets.DOCKER_LOGIN }}
           registry_password: ${{ secrets.DOCKER_TOKEN }}
@@ -90,11 +90,11 @@ jobs:
           fetch-depth: 0
 
       - name: Setup ReARM CLI
-        uses: relizaio/rearm-actions/setup-cli@b243664866fed080d03837b299cdcd796e7e2218
+        uses: relizaio/rearm-actions/setup-cli@4067b5574caa4cde198836c09dfa2375866d78b8
 
       - name: Initialize ReARM Release
         id: init
-        uses: relizaio/rearm-actions/initialize@b243664866fed080d03837b299cdcd796e7e2218
+        uses: relizaio/rearm-actions/initialize@4067b5574caa4cde198836c09dfa2375866d78b8
         with:
           rearm_api_key: ${{ secrets.REARM_API_KEY }}
           rearm_api_id: ${{ secrets.REARM_API_ID }}
