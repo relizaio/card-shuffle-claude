@@ -41,7 +41,7 @@
                     <option v-for="i in computedOrderArray" :key="i" :value="i">{{ i }}</option>
                 </select>
                 <button
-                    v-if="admin"
+                    v-if="admin && !p.admin"
                     class="player-kick"
                     type="button"
                     title="Kick player"
@@ -335,6 +335,10 @@ export default {
             }
         },
         kickPlayer (name) {
+            if (name === this.iPlayer?.name) {
+                this.flashAlert('You cannot kick yourself out of the room.')
+                return
+            }
             this.$socket.emit('kickplayer', { room: this.room, name })
         },
         requestMyPlayer () {
