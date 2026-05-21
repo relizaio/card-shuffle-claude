@@ -5,7 +5,7 @@ RUN npm ci --ignore-scripts
 COPY ./ .
 RUN npm run build
 
-FROM nginx:1.29.7-trixie@sha256:7150b3a39203cb5bee612ff4a9d18774f8c7caf6399d6e8985e97e28eb751c18 as artifact-stage
+FROM nginx:stable-alpine3.23-slim@sha256:470297f0c1a833c3b3089542cb38d72c83a4beb2a449ef807d33267c0a063d7c as artifact-stage
 ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined
 ARG GIT_BRANCH=git_branch_undefined
