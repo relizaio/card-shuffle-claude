@@ -10,11 +10,6 @@ pipeline {
         REARM_API = credentials('REARM_API')
     }
 
-    options {
-        timestamps()
-        ansiColor('xterm')
-    }
-
     stages {
         stage('Capture commit metadata') {
             steps {
