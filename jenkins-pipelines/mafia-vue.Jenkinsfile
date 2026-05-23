@@ -17,8 +17,14 @@ pipeline {
                         script: "git log -1 --date=iso-strict --pretty='%ad'").trim()
                     env.COMMIT_MESSAGE = sh(returnStdout: true,
                         script: "git log -1 --pretty=%s").trim()
+                    // Synthesise a per-build commit so each Jenkins trigger
+                    // mints a fresh version on the same physical commit
+                    // (ReARM dedups by real commit; this is test-only).
+                    env.SIM_COMMIT = sh(returnStdout: true,
+                        script: "printf '%s' '${env.BUILD_NUMBER}-mafia-vue-${env.GIT_COMMIT}' | sha1sum | cut -d' ' -f1").trim()
                     env.SIM_DIGEST = "sha256:" + sh(returnStdout: true,
                         script: "printf '%s' '${env.BUILD_NUMBER}-mafia-vue-${env.GIT_COMMIT}' | sha256sum | cut -d' ' -f1").trim()
+                    echo "Simulated mafia-vue commit: ${env.SIM_COMMIT}"
                     echo "Simulated mafia-vue image digest: ${env.SIM_DIGEST}"
                 }
             }
@@ -30,6 +36,7 @@ pipeline {
                     uri:                                       'https://psclaude.rearmhq.com',
                     vcsUri:                                    'https://github.com/relizaio/card-shuffle-claude',
                     repoPath:                                  'mafia-vue',
+                    commitHash:                                env.SIM_COMMIT,
                     createComponentIfMissing:                  'true',
                     createComponentName:                       'card-shuffle-claude/mafia-vue (Jenkins test)',
                     createComponentVersionSchema:              'semver',

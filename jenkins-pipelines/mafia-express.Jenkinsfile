@@ -14,8 +14,11 @@ pipeline {
                         script: "git log -1 --date=iso-strict --pretty='%ad'").trim()
                     env.COMMIT_MESSAGE = sh(returnStdout: true,
                         script: "git log -1 --pretty=%s").trim()
+                    env.SIM_COMMIT = sh(returnStdout: true,
+                        script: "printf '%s' '${env.BUILD_NUMBER}-mafia-express-${env.GIT_COMMIT}' | sha1sum | cut -d' ' -f1").trim()
                     env.SIM_DIGEST = "sha256:" + sh(returnStdout: true,
                         script: "printf '%s' '${env.BUILD_NUMBER}-mafia-express-${env.GIT_COMMIT}' | sha256sum | cut -d' ' -f1").trim()
+                    echo "Simulated mafia-express commit: ${env.SIM_COMMIT}"
                     echo "Simulated mafia-express image digest: ${env.SIM_DIGEST}"
                 }
             }
@@ -27,6 +30,7 @@ pipeline {
                     uri:                                       'https://psclaude.rearmhq.com',
                     vcsUri:                                    'https://github.com/relizaio/card-shuffle-claude',
                     repoPath:                                  'mafia-express',
+                    commitHash:                                env.SIM_COMMIT,
                     createComponentIfMissing:                  'true',
                     createComponentName:                       'card-shuffle-claude/mafia-express (Jenkins test)',
                     createComponentVersionSchema:              'semver',
