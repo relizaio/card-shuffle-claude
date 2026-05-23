@@ -15,7 +15,7 @@ pipeline {
                         script: "git log -1 --date=iso-strict --pretty='%ad'").trim()
                     env.COMMIT_MESSAGE = sh(returnStdout: true,
                         script: "git log -1 --pretty=%s").trim()
-                    env.SIM_DIGEST = "SHA-256:" + sh(returnStdout: true,
+                    env.SIM_DIGEST = "sha256:" + sh(returnStdout: true,
                         script: "printf '%s' '${env.BUILD_NUMBER}-mafia-helm-${env.GIT_COMMIT}' | sha256sum | cut -d' ' -f1").trim()
                     echo "Simulated mafia-helm chart digest: ${env.SIM_DIGEST}"
                 }
