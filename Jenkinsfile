@@ -39,9 +39,10 @@ pipeline {
                     jenkinsVersionMeta: 'true'
                 ) {
                     script {
-                        echo "ReARM minted version: ${env.VERSION}"
+                        echo "ReARM minted version: ${env.VERSION} (PENDING)"
                         echo "Docker-safe version: ${env.DOCKER_VERSION}"
-                        env.STATUS = 'complete'
+                        // withRearm created the release in PENDING; this call
+                        // attaches metadata and flips lifecycle to ASSEMBLED.
                         addRearmRelease()
                     }
                 }
