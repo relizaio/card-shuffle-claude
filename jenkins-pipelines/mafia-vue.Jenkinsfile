@@ -17,6 +17,10 @@ pipeline {
                         script: "git log -1 --date=iso-strict --pretty='%ad'").trim()
                     env.COMMIT_MESSAGE = sh(returnStdout: true,
                         script: "git log -1 --pretty=%s").trim()
+                    env.COMMIT_AUTHOR  = sh(returnStdout: true,
+                        script: "git log -1 --pretty=%an").trim()
+                    env.COMMIT_EMAIL   = sh(returnStdout: true,
+                        script: "git log -1 --pretty=%ae").trim()
                     // Synthesise a per-build commit so each Jenkins trigger
                     // mints a fresh version on the same physical commit
                     // (ReARM dedups by real commit; this is test-only).
