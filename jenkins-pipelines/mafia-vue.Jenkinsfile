@@ -81,49 +81,37 @@ pipeline {
                     script {
                         echo "ReARM minted version: ${env.VERSION} (PENDING)"
                         def base = "${env.WORKSPACE}/artifacts"
-
-                        def sceArts = groovy.json.JsonOutput.toJson([
-                            [
-                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.sce.cdx.json",
-                                type:              'BOM',
-                                bomFormat:         'CYCLONEDX',
-                                filePath:          "${base}/mafia-vue.sce.cdx.json"
-                            ]
-                        ])
-                        def releaseArts = groovy.json.JsonOutput.toJson([
-                            [
-                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.release.cdx.json",
-                                type:              'BOM',
-                                bomFormat:         'CYCLONEDX',
-                                filePath:          "${base}/mafia-vue.release.cdx.json"
-                            ]
-                        ])
-                        // The odelArts BOM carries a child SIGNATURE artifact —
-                        // tests the artifact-of-artifact upload path. Both
-                        // file paths get resolved into Apollo multipart parts.
-                        def odelArts = groovy.json.JsonOutput.toJson([
-                            [
-                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.odel.cdx.json",
-                                type:              'BOM',
-                                bomFormat:         'CYCLONEDX',
-                                filePath:          "${base}/mafia-vue.odel.cdx.json",
-                                artifacts: [
-                                    [
-                                        displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.odel.cdx.json.sig",
-                                        type:              'SIGNATURE',
-                                        filePath:          "${base}/signature.txt"
-                                    ]
-                                ]
-                            ]
-                        ])
-
+                        // Native Groovy maps/lists go straight through @DataBoundSetter
+                        // — no JsonOutput.toJson, no sandbox approval needed.
                         addRearmRelease(
                             deliverableId:     "registry.psclaude.local/jenkins-test/mafia-vue:${env.DOCKER_VERSION}",
                             deliverableType:   'CONTAINER',
                             deliverableDigest: env.SIM_DIGEST,
-                            sceArtsJson:       sceArts,
-                            releaseArtsJson:   releaseArts,
-                            odelArtsJson:      odelArts
+                            sceArts: [[
+                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.sce.cdx.json",
+                                type:              'BOM',
+                                bomFormat:         'CYCLONEDX',
+                                filePath:          "${base}/mafia-vue.sce.cdx.json"
+                            ]],
+                            releaseArts: [[
+                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.release.cdx.json",
+                                type:              'BOM',
+                                bomFormat:         'CYCLONEDX',
+                                filePath:          "${base}/mafia-vue.release.cdx.json"
+                            ]],
+                            // The odel BOM carries a child SIGNATURE artifact —
+                            // exercises the artifact-of-artifact upload path.
+                            odelArts: [[
+                                displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.odel.cdx.json",
+                                type:              'BOM',
+                                bomFormat:         'CYCLONEDX',
+                                filePath:          "${base}/mafia-vue.odel.cdx.json",
+                                artifacts: [[
+                                    displayIdentifier: "mafia-vue-${env.DOCKER_VERSION}.odel.cdx.json.sig",
+                                    type:              'SIGNATURE',
+                                    filePath:          "${base}/signature.txt"
+                                ]]
+                            ]]
                         )
                     }
                 }
