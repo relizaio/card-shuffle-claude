@@ -2,9 +2,10 @@
 # (see Jenkinsfile in repo root) is being exercised against psclaude. To
 # re-enable GHA, replace `workflow_dispatch:` with the push/pull_request set
 # below.
-on:
-  workflow_dispatch:
-# on: [push, pull_request]
+# on:
+  # workflow_dispatch:
+# switched back to gha (2026-06-06) - PS
+on: [push, pull_request]
 
 name: Build Mafia Components And Submit Metadata To Reliza ReARM (psclaude)
 
