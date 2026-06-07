@@ -1,10 +1,4 @@
-# Triggers temporarily disabled while the Jenkins-driven release pipeline
-# (see Jenkinsfile in repo root) is being exercised against psclaude. To
-# re-enable GHA, replace `workflow_dispatch:` with the push/pull_request set
-# below.
-on:
-  workflow_dispatch:
-# on: [push, pull_request]
+on: [push, pull_request]
 
 name: Build Mafia Components And Submit Metadata To Reliza ReARM (psclaude)
 
