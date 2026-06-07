@@ -16,14 +16,6 @@ jobs:
       id-token: write
     name: Build And Push mafia-vue
     runs-on: ubuntu-latest
-    # Serialize every ReARM-submitting job per branch so the component jobs
-    # (and any parallel push + pull_request runs) don't race to create the
-    # same product release version <branch>.0 — the loser otherwise fails with
-    # "version already belongs to another non-pending release".
-    # cancel-in-progress: false => queue, don't drop builds.
-    concurrency:
-      group: mafia-rearm-submit-${{ github.head_ref || github.ref_name }}
-      cancel-in-progress: false
     steps:
       - name: Build And Push mafia-vue to ReARM (psclaude)
         uses: relizaio/rearm-docker-action@ca8c919da76a05706c552866e09c7d2f6e342402
@@ -46,10 +38,6 @@ jobs:
       id-token: write
     name: Build And Push mafia-express
     runs-on: ubuntu-latest
-    # Shared serialization group — see build-mafia-vue.
-    concurrency:
-      group: mafia-rearm-submit-${{ github.head_ref || github.ref_name }}
-      cancel-in-progress: false
     steps:
       - name: Build And Push mafia-express to ReARM (psclaude)
         uses: relizaio/rearm-docker-action@ca8c919da76a05706c552866e09c7d2f6e342402
@@ -72,10 +60,9 @@ jobs:
       id-token: write
     name: Build And Push mafia Helm Chart
     runs-on: ubuntu-latest
-    # Shared serialization group — see build-mafia-vue.
-    concurrency:
-      group: mafia-rearm-submit-${{ github.head_ref || github.ref_name }}
-      cancel-in-progress: false
+    # Helm chart is released from main only — skip on feature branches / PRs
+    # so only vue + express are in play there.
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Build mafia Helm Chart and push to ReARM (psclaude)
         uses: relizaio/rearm-helm-action@main
@@ -97,13 +84,9 @@ jobs:
       id-token: write
     name: Submit mafia-test-harness Metadata
     runs-on: ubuntu-latest
-    # Same shared group as the component jobs so all four ReARM-submitting jobs
-    # (and any parallel push + pull_request runs) serialize per branch — avoids
-    # duplicate components AND the duplicate product-version race. Keyed on
-    # head_ref||ref_name so push and pull_request runs share the group.
-    concurrency:
-      group: mafia-rearm-submit-${{ github.head_ref || github.ref_name }}
-      cancel-in-progress: false
+    # Test-harness metadata is submitted from main only — skip on feature
+    # branches / PRs so only vue + express are in play there.
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
