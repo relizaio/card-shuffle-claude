@@ -8,10 +8,18 @@ pipeline {
 
     environment {
         REARM_API = credentials('REARM_API')
+        // DISABLED 2026-06-07: GitHub Actions (.github/workflows/build.yml) was
+        // switched back on as the active release lane. Per the header note,
+        // only one of GHA / Jenkins should fire at a time, so this pipeline is
+        // gated OFF to avoid both racing to create the same ReARM release
+        // version ("version already belongs to another non-pending release").
+        // Flip back to 'true' to re-enable — nothing below is removed.
+        JENKINS_PIPELINE_ENABLED = 'false'
     }
 
     stages {
         stage('Capture commit metadata') {
+            when { environment name: 'JENKINS_PIPELINE_ENABLED', value: 'true' }
             steps {
                 script {
                     env.COMMIT_TIME = sh(
@@ -27,6 +35,7 @@ pipeline {
         }
 
         stage('ReARM version + release') {
+            when { environment name: 'JENKINS_PIPELINE_ENABLED', value: 'true' }
             steps {
                 withRearm(
                     uri: 'https://psclaude.rearmhq.com',
