@@ -39,10 +39,11 @@ app.get('/api', function(req, res){
 // every request under /api/* before express sees it, so operational
 // endpoints live at the root instead of the /api prefix.
 app.get('/health', function(req, res){
+    const uptimeSeconds = Math.floor(process.uptime());
     if (redisClient.isReady) {
-        res.json({ status: 'ok', redis: 'connected' });
+        res.json({ status: 'ok', redis: 'connected', uptimeSeconds: uptimeSeconds });
     } else {
-        res.status(503).json({ status: 'degraded', redis: 'disconnected' });
+        res.status(503).json({ status: 'degraded', redis: 'disconnected', uptimeSeconds: uptimeSeconds });
     }
 });
 
