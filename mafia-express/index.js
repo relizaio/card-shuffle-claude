@@ -35,6 +35,17 @@ app.get('/api', function(req, res){
     res.send('<h1>Hello world</h1>');
 });
 
+// NB: socket.io is mounted at path '/api' and its engine intercepts
+// every request under /api/* before express sees it, so operational
+// endpoints live at the root instead of the /api prefix.
+app.get('/health', function(req, res){
+    if (redisClient.isReady) {
+        res.json({ status: 'ok', redis: 'connected' });
+    } else {
+        res.status(503).json({ status: 'degraded', redis: 'disconnected' });
+    }
+});
+
 io.on('connection', function(socket){
     console.log('a user connected');
 
