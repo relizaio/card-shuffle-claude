@@ -38,6 +38,14 @@ app.get('/api', function(req, res){
 // NB: socket.io is mounted at path '/api' and its engine intercepts
 // every request under /api/* before express sees it, so operational
 // endpoints live at the root instead of the /api prefix.
+app.get('/health', function(req, res){
+    if (redisClient.isReady) {
+        res.json({ status: 'ok', redis: 'connected' });
+    } else {
+        res.status(503).json({ status: 'degraded', redis: 'disconnected' });
+    }
+});
+
 const appVersion = require('./package.json').version;
 app.get('/version', function(req, res){
     res.json({ version: appVersion });
