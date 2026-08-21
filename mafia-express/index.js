@@ -46,6 +46,11 @@ app.get('/health', function(req, res){
     }
 });
 
+const appVersion = require('./package.json').version;
+app.get('/version', function(req, res){
+    res.json({ version: appVersion });
+});
+
 io.on('connection', function(socket){
     console.log('a user connected');
 
