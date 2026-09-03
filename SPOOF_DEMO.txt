@@ -1,0 +1,1 @@
+spoofed author signing demo via contents API
