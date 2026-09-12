@@ -4,12 +4,16 @@
 # and get refused when asking for a component under another repository.
 name: Federated identity e2e (psclaude)
 on:
+  push:
+    branches: [federated-oidc-e2e]
   workflow_dispatch:
     inputs:
       rearm_url:
         description: ReARM instance
         default: https://psclaude.rearmhq.com
         required: true
+env:
+  REARM_URL: ${{ inputs.rearm_url || 'https://psclaude.rearmhq.com' }}
 jobs:
   exchange-and-call:
     permissions:
@@ -20,7 +24,7 @@ jobs:
       - name: Request the GitHub identity token for ReARM
         id: idtoken
         env:
-          AUD: ${{ inputs.rearm_url }}
+          AUD: ${{ env.REARM_URL }}
         run: |
           set -euo pipefail
           TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -r .value)
@@ -30,7 +34,6 @@ jobs:
       - name: Exchange it at ReARM (RFC 7523 jwt-bearer)
         id: exchange
         env:
-          REARM_URL: ${{ inputs.rearm_url }}
           ASSERTION: ${{ steps.idtoken.outputs.token }}
         run: |
           set -euo pipefail
@@ -45,7 +48,6 @@ jobs:
           echo "access_token=$AT" >> "$GITHUB_OUTPUT"
       - name: Version an existing component under this repository (template scope)
         env:
-          REARM_URL: ${{ inputs.rearm_url }}
           AT: ${{ steps.exchange.outputs.access_token }}
         run: |
           set -euo pipefail
@@ -55,7 +57,6 @@ jobs:
           echo; jq -e '.data.getNewVersionProgrammatic.version' /tmp/r1.json >/dev/null
       - name: Create a component bound to this repository (creation gate)
         env:
-          REARM_URL: ${{ inputs.rearm_url }}
           AT: ${{ steps.exchange.outputs.access_token }}
         run: |
           set -euo pipefail
@@ -65,7 +66,6 @@ jobs:
           echo; jq -e '.data.getNewVersionProgrammatic.version' /tmp/r2.json >/dev/null
       - name: Refused for a component under another repository
         env:
-          REARM_URL: ${{ inputs.rearm_url }}
           AT: ${{ steps.exchange.outputs.access_token }}
         run: |
           set -euo pipefail
@@ -75,7 +75,6 @@ jobs:
           echo; jq -e '.errors | length > 0' /tmp/r3.json >/dev/null && jq -e '.data.getNewVersionProgrammatic == null' /tmp/r3.json >/dev/null
       - name: A replayed identity token is refused
         env:
-          REARM_URL: ${{ inputs.rearm_url }}
           ASSERTION: ${{ steps.idtoken.outputs.token }}
         run: |
           set -euo pipefail
