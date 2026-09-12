@@ -1,0 +1,85 @@
+# End-to-end check of ReARM federated identity: the job authenticates to ReARM with the identity
+# token GitHub issues to it (no secret anywhere), then exercises the template scope the trust
+# rule grants: version a component under this repository, create one bound to this repository,
+# and get refused when asking for a component under another repository.
+name: Federated identity e2e (psclaude)
+on:
+  workflow_dispatch:
+    inputs:
+      rearm_url:
+        description: ReARM instance
+        default: https://psclaude.rearmhq.com
+        required: true
+jobs:
+  exchange-and-call:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request the GitHub identity token for ReARM
+        id: idtoken
+        env:
+          AUD: ${{ inputs.rearm_url }}
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -r .value)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "claims: $(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq -c '{iss,aud,repository,repository_id,repository_owner,ref,workflow_ref,event_name}')"
+      - name: Exchange it at ReARM (RFC 7523 jwt-bearer)
+        id: exchange
+        env:
+          REARM_URL: ${{ inputs.rearm_url }}
+          ASSERTION: ${{ steps.idtoken.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESP=$(curl -sS -X POST "$REARM_URL/api/programmatic/token" \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' \
+            --data-urlencode "assertion=$ASSERTION")
+          echo "exchange: $(echo "$RESP" | jq -c 'del(.access_token)')"
+          AT=$(echo "$RESP" | jq -r '.access_token // empty')
+          test -n "$AT"
+          echo "::add-mask::$AT"
+          echo "access_token=$AT" >> "$GITHUB_OUTPUT"
+      - name: Version an existing component under this repository (template scope)
+        env:
+          REARM_URL: ${{ inputs.rearm_url }}
+          AT: ${{ steps.exchange.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          Q='mutation GetNewVersionProgrammatic($i: GetNewVersionInput!) { getNewVersionProgrammatic(newVersionInput: $i) { version releaseAlreadyExists } }'
+          jq -n --arg q "$Q" '{query:$q, variables:{i:{vcsUri:"https://github.com/relizaio/card-shuffle-claude", repoPath:"mafia-express", branch:"federated-oidc-e2e", onlyVersion:true}}}' \
+            | curl -sS -X POST "$REARM_URL/api/programmatic/graphql" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d @- | tee /tmp/r1.json
+          echo; jq -e '.data.getNewVersionProgrammatic.version' /tmp/r1.json >/dev/null
+      - name: Create a component bound to this repository (creation gate)
+        env:
+          REARM_URL: ${{ inputs.rearm_url }}
+          AT: ${{ steps.exchange.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          Q='mutation GetNewVersionProgrammatic($i: GetNewVersionInput!) { getNewVersionProgrammatic(newVersionInput: $i) { version releaseAlreadyExists } }'
+          jq -n --arg q "$Q" --arg rp "fed-e2e-${{ github.run_number }}" '{query:$q, variables:{i:{vcsUri:"https://github.com/relizaio/card-shuffle-claude", repoPath:$rp, branch:"main", createComponentIfMissing:true, createComponentVersionSchema:"semver", onlyVersion:true}}}' \
+            | curl -sS -X POST "$REARM_URL/api/programmatic/graphql" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d @- | tee /tmp/r2.json
+          echo; jq -e '.data.getNewVersionProgrammatic.version' /tmp/r2.json >/dev/null
+      - name: Refused for a component under another repository
+        env:
+          REARM_URL: ${{ inputs.rearm_url }}
+          AT: ${{ steps.exchange.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          Q='mutation GetNewVersionProgrammatic($i: GetNewVersionInput!) { getNewVersionProgrammatic(newVersionInput: $i) { version } }'
+          jq -n --arg q "$Q" '{query:$q, variables:{i:{vcsUri:"https://github.com/relizaio/some-other-repo", branch:"main", createComponentIfMissing:true, onlyVersion:true}}}' \
+            | curl -sS -X POST "$REARM_URL/api/programmatic/graphql" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d @- | tee /tmp/r3.json
+          echo; jq -e '.errors | length > 0' /tmp/r3.json >/dev/null && jq -e '.data.getNewVersionProgrammatic == null' /tmp/r3.json >/dev/null
+      - name: A replayed identity token is refused
+        env:
+          REARM_URL: ${{ inputs.rearm_url }}
+          ASSERTION: ${{ steps.idtoken.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESP=$(curl -sS -X POST "$REARM_URL/api/programmatic/token" -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' --data-urlencode "assertion=$ASSERTION")
+          echo "replay: $(echo "$RESP" | jq -c 'del(.access_token)')"
+          echo "$RESP" | jq -e '.error == "invalid_grant"' >/dev/null
