@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           Q='mutation GetNewVersionProgrammatic($i: GetNewVersionInput!) { getNewVersionProgrammatic(newVersionInput: $i) { version releaseAlreadyExists } }'
-          jq -n --arg q "$Q" --arg rp "fed-e2e-${{ github.run_number }}" '{query:$q, variables:{i:{vcsUri:"https://github.com/relizaio/card-shuffle-claude", repoPath:$rp, branch:"main", createComponentIfMissing:true, createComponentVersionSchema:"semver", onlyVersion:true}}}' \
+          jq -n --arg q "$Q" --arg rp "fed-e2e-${{ github.run_number }}" '{query:$q, variables:{i:{vcsUri:"https://github.com/relizaio/card-shuffle-claude", repoPath:$rp, branch:"main", createComponentIfMissing:true, createComponentVersionSchema:"semver", createComponentFeatureBranchVersionSchema:"Branch.Micro", onlyVersion:true}}}' \
             | curl -sS -X POST "$REARM_URL/api/programmatic/graphql" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d @- | tee /tmp/r2.json
           echo; jq -e '.data.getNewVersionProgrammatic.version' /tmp/r2.json >/dev/null
       - name: Refused for a component under another repository
