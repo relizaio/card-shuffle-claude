@@ -111,3 +111,36 @@ jobs:
           set +e
           OUT=$(rearm whoami -u ${{ env.REARM_URL }} --auth github-oidc --org 00000000-0000-0000-0000-000000000000 2>&1); echo "$OUT" | head -c 400; echo
           echo "$OUT" | grep -q "identity token refused"
+  actions-github-oidc:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: rearm-actions main plus the github-oidc patch (until the actions PR lands)
+        uses: actions/checkout@v4
+        with:
+          repository: relizaio/rearm-actions
+          ref: main
+          path: rearm-actions
+      - run: cd rearm-actions && git apply ../.github/rearm-actions-github-oidc.patch && git diff --stat
+      - name: Build rearm-cli from the github-oidc branch
+        uses: actions/checkout@v4
+        with:
+          repository: relizaio/rearm-cli
+          ref: 2026-09-github-oidc-auth
+          path: rearm-cli
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: rearm-cli/go.mod
+          cache: false
+      - run: cd rearm-cli && GOFLAGS=-mod=mod GONOSUMDB=github.com/relizaio GOPROXY=direct go build -o /usr/local/bin/rearm . && rearm version
+      - name: initialize action with the identity token, no key inputs
+        id: init
+        uses: ./rearm-actions/initialize
+        with:
+          rearm_auth: github-oidc
+          rearm_api_url: ${{ env.REARM_URL }}
+          repo_path: mafia-express
+      - run: 'echo "version from the action: ${{ steps.init.outputs.rearm_full_version }} / ${{ steps.init.outputs.rearm_short_version }}"; test -n "${{ steps.init.outputs.rearm_full_version }}"'

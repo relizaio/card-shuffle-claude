@@ -1,0 +1,204 @@
+From 718a85909a85ba2c1d9d6e3f3268fcee68290e8b Mon Sep 17 00:00:00 2001
+From: taleodor-claude <taleodor-claude@users.noreply.github.com>
+Date: Sun, 13 Sep 2026 15:09:33 +0000
+Subject: [PATCH] feat: authenticate with the GitHub identity token, no secret
+
+The initialize, finalize and add-multi-release actions can run without an API key: with
+rearm_auth set to github-oidc (or left empty in a job that has id-token: write and passes no
+key), the CLI authenticates with the identity token GitHub issues to the job, exchanged at the
+ReARM token endpoint through an organization trust rule. rearm_api_id and rearm_api_key become
+optional; rearm_org names the organization when several trust the same repository. The two
+values reach the CLI as REARM_AUTH and REARM_ORG on every step that runs it.
+
+Needs a ReARM CLI release with --auth github-oidc; until setup-cli defaults to one, pass version
+and digest.
+
+ReARM-Agentic-Session: rearm-actions-github-oidc-1789312166
+ReARM-Agent: 62df357e-a3a4-4df5-82d4-049e629d1c6b
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ README.md                     | 30 ++++++++++++++++++++++++++++++
+ add-multi-release/action.yaml | 18 ++++++++++++++----
+ finalize/action.yaml          | 18 ++++++++++++++----
+ initialize/action.yaml        | 20 ++++++++++++++++----
+ 4 files changed, 74 insertions(+), 12 deletions(-)
+
+diff --git a/README.md b/README.md
+index 9ccab29..8449877 100644
+--- a/README.md
++++ b/README.md
+@@ -115,6 +115,36 @@ jobs:
+ - **jq**: Required for JSON parsing
+ - **Git history**: Use `fetch-depth: 0` in checkout for full history (required for change detection and branch sync)
+ 
++## Authenticating with the GitHub identity token (no secret)
++
++Instead of an API key id and secret, a job can authenticate to ReARM with the
++identity token GitHub issues to it, once an organization admin has added a trust
++rule for the repository in ReARM (Organization Settings, Programmatic Access,
++Federated Identities). Nothing is stored in the repository's secrets:
++
++```yaml
++permissions:
++  contents: read
++  id-token: write
++steps:
++  - uses: relizaio/rearm-actions/setup-cli@<ref>
++    with:
++      version: <a CLI release that has --auth github-oidc>
++      digest: <its sha256 for your runner platform>
++  - uses: relizaio/rearm-actions/initialize@<ref>
++    with:
++      rearm_auth: github-oidc
++      rearm_api_url: https://your.rearm.instance
++```
++
++Leave `rearm_api_id` and `rearm_api_key` out. The CLI requests the identity
++token with the ReARM URL as audience, exchanges it at the ReARM token endpoint
++for a one-hour access token, and repeats that on its own when needed. Set
++`rearm_org` (the ReARM organization uuid) only when several organizations trust
++the same repository. With `rearm_auth` left empty the CLI picks the mode from
++the credentials present: a key pair when given, otherwise the identity token in
++a job that has `id-token: write`.
++
+ ## Input Value Requirements
+ 
+ Since `v1.7.0`, every action consumes its inputs through step-level `env:`
+diff --git a/add-multi-release/action.yaml b/add-multi-release/action.yaml
+index ac00c03..bfeef85 100644
+--- a/add-multi-release/action.yaml
++++ b/add-multi-release/action.yaml
+@@ -5,15 +5,23 @@ branding:
+   color: 'green'
+ inputs:
+   rearm_api_id:
+-    description: "ReARM API Key ID"
+-    required: true
++    description: "ReARM API Key ID (leave empty with rearm_auth: github-oidc)"
++    required: false
+   rearm_api_key:
+-    description: "ReARM API Key"
+-    required: true
++    description: "ReARM API Key secret (leave empty with rearm_auth: github-oidc)"
++    required: false
+   rearm_api_url:
+     description: "ReARM API URL"
+     required: false
+     default: 'https://demo.rearmhq.com'
++  rearm_auth:
++    description: "Credential mode passed to the CLI: key (rearm_api_id and rearm_api_key), or github-oidc (the identity token GitHub issues to the job, no secret; the job needs permissions id-token: write and the ReARM organization a trust rule for this repository). Empty picks the mode from the credentials present."
++    required: false
++    default: ""
++  rearm_org:
++    description: "ReARM organization uuid, for github-oidc only when several organizations trust the same repository"
++    required: false
++    default: ""
+   releases:
+     description: >-
+       JSON array of release objects, each shaped like the single-release
+@@ -56,6 +64,8 @@ runs:
+         REARM_API_ID: ${{ inputs.rearm_api_id }}
+         REARM_API_KEY: ${{ inputs.rearm_api_key }}
+         REARM_API_URL: ${{ inputs.rearm_api_url }}
++        REARM_AUTH: ${{ inputs.rearm_auth }}
++        REARM_ORG: ${{ inputs.rearm_org }}
+         RELEASES_JSON: ${{ inputs.releases }}
+         INFILE_INPUT: ${{ inputs.infile }}
+         STRIPBOM: ${{ inputs.stripbom }}
+diff --git a/finalize/action.yaml b/finalize/action.yaml
+index 2b3e9f6..7427ea6 100644
+--- a/finalize/action.yaml
++++ b/finalize/action.yaml
+@@ -5,11 +5,11 @@ branding:
+   color: 'green'
+ inputs:
+   rearm_api_id:
+-    description: "ReARM API Key ID"
+-    required: true
++    description: "ReARM API Key ID (leave empty with rearm_auth: github-oidc)"
++    required: false
+   rearm_api_key:
+-    description: "ReARM API Key"
+-    required: true
++    description: "ReARM API Key secret (leave empty with rearm_auth: github-oidc)"
++    required: false
+   image_full_name:
+     description: "Full name of the Docker image with registry prefix"
+     required: true
+@@ -32,6 +32,14 @@ inputs:
+     description: "ReARM API URL"
+     required: false
+     default: 'https://demo.rearmhq.com'
++  rearm_auth:
++    description: "Credential mode passed to the CLI: key (rearm_api_id and rearm_api_key), or github-oidc (the identity token GitHub issues to the job, no secret; the job needs permissions id-token: write and the ReARM organization a trust rule for this repository). Empty picks the mode from the credentials present."
++    required: false
++    default: ""
++  rearm_org:
++    description: "ReARM organization uuid, for github-oidc only when several organizations trust the same repository"
++    required: false
++    default: ""
+   deliverable_type:
+     description: "Type of artifact created by this release [CONTAINER, FILE]"
+     required: false
+@@ -236,6 +244,8 @@ runs:
+         INPUTS_SCEARTS: ${{ inputs.scearts }}
+         INPUTS_ODELARTSJSON: ${{ inputs.odelartsjson }}
+         INPUTS_REARM_API_URL: ${{ inputs.rearm_api_url }}
++        REARM_AUTH: ${{ inputs.rearm_auth }}
++        REARM_ORG: ${{ inputs.rearm_org }}
+         INPUTS_REARM_FULL_VERSION: ${{ inputs.rearm_full_version }}
+         INPUTS_IMAGE_FULL_NAME: ${{inputs.image_full_name}}
+         INPUTS_DELIVERABLE_TYPE: ${{inputs.deliverable_type}}
+diff --git a/initialize/action.yaml b/initialize/action.yaml
+index e97fcd5..e84f571 100644
+--- a/initialize/action.yaml
++++ b/initialize/action.yaml
+@@ -5,15 +5,23 @@ branding:
+   color: 'green'
+ inputs:
+   rearm_api_key:
+-    description: "ReARM API Key"
+-    required: true
++    description: "ReARM API Key secret (leave empty with rearm_auth: github-oidc)"
++    required: false
+   rearm_api_id:
+-    description: "ReARM API Key ID"
+-    required: true
++    description: "ReARM API Key ID (leave empty with rearm_auth: github-oidc)"
++    required: false
+   rearm_api_url:
+     description: "ReARM API URL"
+     required: false
+     default: "https://demo.rearmhq.com"
++  rearm_auth:
++    description: "Credential mode passed to the CLI: key (rearm_api_id and rearm_api_key), or github-oidc (the identity token GitHub issues to the job, no secret; the job needs permissions id-token: write and the ReARM organization a trust rule for this repository). Empty picks the mode from the credentials present."
++    required: false
++    default: ""
++  rearm_org:
++    description: "ReARM organization uuid, for github-oidc only when several organizations trust the same repository"
++    required: false
++    default: ""
+   repo_path:
+     description: "Repository path (relative to workspace root)"
+     required: false
+@@ -112,6 +120,8 @@ runs:
+         REARM_API_KEY: ${{ inputs.rearm_api_key }}
+         REARM_APIKEYID: ${{ inputs.rearm_api_id }}
+         REARM_API_URL: ${{ inputs.rearm_api_url }}
++        REARM_AUTH: ${{ inputs.rearm_auth }}
++        REARM_ORG: ${{ inputs.rearm_org }}
+         REPO_PATH: ${{ inputs.repo_path }}
+         COMPONENT: ${{ inputs.component }}
+         VCS_URI: ${{ github.server_url }}/${{ github.repository }}
+@@ -153,6 +163,8 @@ runs:
+         REARM_API_KEY: ${{ inputs.rearm_api_key }}
+         rearm_api_id: ${{ inputs.rearm_api_id }}
+         REARM_API_URL: ${{ inputs.rearm_api_url }}
++        REARM_AUTH: ${{ inputs.rearm_auth }}
++        REARM_ORG: ${{ inputs.rearm_org }}
+         REPO_PATH: ${{ inputs.repo_path }}
+         INPUT_BRANCH: ${{ inputs.branch }}
+         INPUT_VERSION: ${{ inputs.version }}
+-- 
+2.43.0
+
