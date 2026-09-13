@@ -143,4 +143,4 @@ jobs:
           rearm_auth: github-oidc
           rearm_api_url: ${{ env.REARM_URL }}
           repo_path: mafia-express
-      - run: 'echo "version from the action: ${{ steps.init.outputs.rearm_full_version }} / ${{ steps.init.outputs.rearm_short_version }}"; test -n "${{ steps.init.outputs.rearm_full_version }}"'
+      - run: 'echo "version from the action: ${{ steps.init.outputs.full_version }} / ${{ steps.init.outputs.short_version }}"; test -n "${{ steps.init.outputs.full_version }}"'
