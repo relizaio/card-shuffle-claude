@@ -104,7 +104,7 @@ jobs:
       - name: getversion through the CLI with the identity token
         run: |
           set -euo pipefail
-          rearm getversion --vcsuri "https://github.com/${{ github.repository }}" --repo-path mafia-express -b cli-oidc-e2e --only-version -u ${{ env.REARM_URL }} --auth github-oidc | tee /tmp/v.json
+          rearm getversion --vcsuri "https://github.com/${{ github.repository }}" --repo-path mafia-express -b cli-oidc-e2e --onlyversion -u ${{ env.REARM_URL }} --auth github-oidc | tee /tmp/v.json
           jq -e '.version' /tmp/v.json >/dev/null
       - name: a wrong org is refused with the reason
         run: |
