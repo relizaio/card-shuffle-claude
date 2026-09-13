@@ -82,3 +82,32 @@ jobs:
             --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' --data-urlencode "assertion=$ASSERTION")
           echo "replay: $(echo "$RESP" | jq -c 'del(.access_token)')"
           echo "$RESP" | jq -e '.error == "invalid_grant"' >/dev/null
+  cli-github-oidc:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build rearm-cli from the github-oidc branch
+        uses: actions/checkout@v4
+        with:
+          repository: relizaio/rearm-cli
+          ref: 2026-09-github-oidc-auth
+          path: rearm-cli
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: rearm-cli/go.mod
+          cache: false
+      - run: cd rearm-cli && GOFLAGS=-mod=mod GONOSUMDB=github.com/relizaio GOPROXY=direct go build -o /usr/local/bin/rearm . && rearm version
+      - name: whoami picks the identity token on its own (no other credentials in the job)
+        run: rearm whoami -u ${{ env.REARM_URL }} | tee /tmp/whoami.json && jq -e '.mode == "github-oidc" and .identity == "relizaio/card-shuffle-claude"' /tmp/whoami.json >/dev/null
+      - name: getversion through the CLI with the identity token
+        run: |
+          set -euo pipefail
+          rearm getversion --vcsuri "https://github.com/${{ github.repository }}" --repo-path mafia-express -b cli-oidc-e2e --only-version -u ${{ env.REARM_URL }} --auth github-oidc | tee /tmp/v.json
+          jq -e '.version' /tmp/v.json >/dev/null
+      - name: a wrong org is refused with the reason
+        run: |
+          set +e
+          OUT=$(rearm whoami -u ${{ env.REARM_URL }} --auth github-oidc --org 00000000-0000-0000-0000-000000000000 2>&1); echo "$OUT" | head -c 400; echo
+          echo "$OUT" | grep -q "identity token refused"
